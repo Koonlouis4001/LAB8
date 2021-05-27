@@ -210,17 +210,20 @@ int main(void)
 	  	  {
 	  		  switch(inputchar)
 	  		  {
-	  		  	  case 'a':
+	  		  	  case 'a': //speed up
 	  		  	  case 'A':
 	  		  	  {
-	  		  		  frequency += 1;
+	  		  		  if(frequency < 20)
+	  		  		  {
+	  		  			  frequency += 1;
+	  		  		  }
 	  		  		  sprintf(Frequencyline, "Frequency is [%d] Hz\r\n\r\n", frequency);
 	  		  		  HAL_UART_Transmit(&huart2, (uint8_t*)Frequencyline, strlen(Frequencyline),1000);
 	  		  		  char Frequencyline[32] = { 0 };
 	  		  		  break;
 	  		  	  }
 	  		  	  break;
-	  		  	  case 's':
+	  		  	  case 's': //speed down
 	  		  	  case 'S':
 	  		  	  {
 	  		  		  if(frequency > 0)
@@ -232,7 +235,7 @@ int main(void)
 	  		  		  break;
 	  		  	  }
 	  		  	  break;
-	  		  	  case 'd':
+	  		  	  case 'd': //on off
 	  		  	  case 'D':
 	  		  	  {
 	  		  		  if(Working)
@@ -248,7 +251,7 @@ int main(void)
 	  		  		  break;
 	   		  	  }
 	  		  	  break;
-	  		  	  case 'x':
+	  		  	  case 'x': //back
 	  		  	  case 'X':
 	  		  	  {
 	  		  		  state = '0';//start
@@ -285,7 +288,7 @@ int main(void)
 	  		  }
 	  		  switch(inputchar)
 	  		  {
-				case 'x':
+				case 'x': //back
 				case 'X':
 	  			{
 	  				state = '0';//start
