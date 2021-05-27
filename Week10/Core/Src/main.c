@@ -41,6 +41,8 @@
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
+TIM_HandleTypeDef htim5;
+
 UART_HandleTypeDef huart2;
 
 /* USER CODE BEGIN PV */
@@ -50,12 +52,26 @@ char RxDataBuffer[32] =
 { 0 };
 char ButtonStatus[32] =
 { 0 };
+
+char Frequencyline[32] = { 0 };
+char button[] = " x. Back \r\n Button is pressed\r\n\r\n";
+char unbutton[] = " x. Back \r\n Button is unpressed\r\n\r\n";
+char off[] = " LED is stop working\r\n\r\n";
+char on[] = " LED is start working\r\n\r\n";
 char state = '0';
-char save = '0';
+
 char error[] = "Wrong Input\r\n\r\n";
 int Input = 0;
+int firsttime = 0;
+int Working = 1;
+int frequency = 10;
+
 int16_t inputchar = -1;
 int16_t lastinputchar = -1;
+
+uint64_t timestamp = 0;
+uint64_t _micros = 0;
+
 GPIO_PinState User_Button[2];
 /* USER CODE END PV */
 
@@ -63,9 +79,11 @@ GPIO_PinState User_Button[2];
 void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
 static void MX_USART2_UART_Init(void);
+static void MX_TIM5_Init(void);
 /* USER CODE BEGIN PFP */
-void UARTRecieveAndResponsePolling();
+//void UARTRecieveAndResponsePolling();
 int16_t UARTRecieveIT();
+uint64_t micros();
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -102,10 +120,12 @@ int main(void)
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
   MX_USART2_UART_Init();
+  MX_TIM5_Init();
   /* USER CODE BEGIN 2 */
+  HAL_TIM_Base_Start_IT(&htim5);
   {
 	  char temp[]="NOW LOADING... \r\nLAB9 is now operating \r\n\r\n";
-	  HAL_UART_Transmit(&huart2, (uint8_t*)temp, strlen(temp),1000);
+	  HAL_UART_Transmit(&huart2, (uint8_t*)temp, strlen(temp),2000);
   }
   /* USER CODE END 2 */
 
@@ -113,6 +133,18 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
+	  if(micros()-timestamp > (1000000/(2*frequency)) && Working)
+	  {
+		  timestamp = micros();
+		  if(frequency != 0)
+		  {
+			  HAL_GPIO_TogglePin(LD2_GPIO_Port,LD2_Pin);
+		  }
+	  }
+	  if(Working == 0)
+	  {
+		  HAL_GPIO_WritePin(LD2_GPIO_Port,LD2_Pin, GPIO_PIN_RESET);
+	  }
 	  /*Method 1 Polling Mode*/
 
 	  //UARTRecieveAndResponsePolling();
@@ -126,7 +158,7 @@ int main(void)
 	  {
 
 	  	sprintf(TxDataBuffer, "ReceivedChar:[%c]\r\n\r\n", inputchar);
-	  	HAL_UART_Transmit(&huart2, (uint8_t*)TxDataBuffer, strlen(TxDataBuffer), 1000);
+	  	HAL_UART_Transmit(&huart2, (uint8_t*)TxDataBuffer, strlen(TxDataBuffer), 2000);
 	  	Input = 1;
 	  }
 	  else
@@ -134,18 +166,16 @@ int main(void)
 		  Input = 0;
 	  }
 
-
-
 	  		/*This section just simmulate Work Load*/
-	  HAL_Delay(100);
-	  HAL_GPIO_TogglePin(LD2_GPIO_Port, LD2_Pin);
+	  //HAL_Delay(100);
+	  //HAL_GPIO_TogglePin(LD2_GPIO_Port, LD2_Pin);
 
 	  switch(state)
 	  {
 	  	  case '0': //0 start
 	  	  {
 	  		char temp[] = " 0. LED Control \r\n 1. Button Status\r\n\r\n";
-	  		HAL_UART_Transmit(&huart2, (uint8_t*)temp, strlen(temp),1000);
+	  		HAL_UART_Transmit(&huart2, (uint8_t*)temp, strlen(temp),2000);
 	  		state = '1'; //1 selectMode
 	  	  }
 	  	  break;
@@ -156,19 +186,20 @@ int main(void)
 	  		  	  case '0'://LED Control
 	  		  	  {
 	  		  		  char temp[] = " a. Speed up \r\n s. Speed down\r\n d. On/Off\r\n x. Back\r\n\r\n";
-	  		  		  HAL_UART_Transmit(&huart2, (uint8_t*)temp, strlen(temp),1000);
+	  		  		  HAL_UART_Transmit(&huart2, (uint8_t*)temp, strlen(temp),2000);
 	  		  		  state = '2';//LED Control state
 	  		  		  break;
 	  		  	  }
 	  		  	  case '1'://Button Status
 	  		  	  {
 	  		  		  state = '3';//Button Status state
+	  		  		  firsttime = 0;
 	  		  		  break;
 	  		  	  }
 	  		  	  default:
 	  		  		  if(Input != 0)
 	  		  		  {
-	  		  			  HAL_UART_Transmit(&huart2, (uint8_t*)error, strlen(error),1000);
+	  		  			  HAL_UART_Transmit(&huart2, (uint8_t*)error, strlen(error),2000);
 	  		  			  state = '0';//start
 	  		  		  }
 	  		  		  break;
@@ -182,18 +213,40 @@ int main(void)
 	  		  	  case 'a':
 	  		  	  case 'A':
 	  		  	  {
+	  		  		  frequency += 1;
+	  		  		  sprintf(Frequencyline, "Frequency is [%d] Hz\r\n\r\n", frequency);
+	  		  		  HAL_UART_Transmit(&huart2, (uint8_t*)Frequencyline, strlen(Frequencyline),2000);
 	  		  		  break;
 	  		  	  }
+	  		  	  break;
 	  		  	  case 's':
 	  		  	  case 'S':
 	  		  	  {
+	  		  		  if(frequency > 0)
+	  		  		  {
+		  		  		  frequency += -1;
+	  		  		  }
+	  		  		  sprintf(Frequencyline, "Frequency is [%d] Hz\r\n\r\n", frequency);
+	  		  		  HAL_UART_Transmit(&huart2, (uint8_t*)Frequencyline, strlen(Frequencyline),2000);
 	  		  		  break;
 	  		  	  }
+	  		  	  break;
 	  		  	  case 'd':
 	  		  	  case 'D':
 	  		  	  {
+	  		  		  if(Working)
+	  		  		  {
+	  		  			  Working = 0;
+	  		  			  HAL_UART_Transmit(&huart2, (uint8_t*)off, strlen(off),2000);
+	  		  		  }
+	  		  		  else
+	  		  		  {
+	  		  			  Working = 1;
+	  		  			  HAL_UART_Transmit(&huart2, (uint8_t*)on, strlen(on),2000);
+	  		  		  }
 	  		  		  break;
 	   		  	  }
+	  		  	  break;
 	  		  	  case 'x':
 	  		  	  case 'X':
 	  		  	  {
@@ -204,8 +257,8 @@ int main(void)
 	  		  		  if(Input != 0)
 	  		  		  {
 	  		  			  char temp[] = " a. Speed up \r\n s. Speed down\r\n d. On/Off\r\n x. Back\r\n\r\n";
-	  		  			  HAL_UART_Transmit(&huart2, (uint8_t*)error, strlen(error),1000);
-	  		  			  HAL_UART_Transmit(&huart2, (uint8_t*)temp, strlen(temp),1000);
+	  		  			  HAL_UART_Transmit(&huart2, (uint8_t*)error, strlen(error),2000);
+	  		  			  HAL_UART_Transmit(&huart2, (uint8_t*)temp, strlen(temp),2000);
 	  		  		  }
 	  		  		  break;
 	  		  }
@@ -214,17 +267,21 @@ int main(void)
 	  	  case '3'://Button Status state
 	  	  {
 	  		  User_Button[0] = HAL_GPIO_ReadPin(GPIOC, GPIO_PIN_13);
-	  		  if(User_Button[1] == GPIO_PIN_SET && User_Button[0] == GPIO_PIN_RESET)
+	  		  if(User_Button[1] != User_Button[0])
 	  		  {
-	  			  state = '4';
-	  			  save = state;
-	  		  }
-	  		  else if(User_Button[1] == GPIO_PIN_RESET && User_Button[0] == GPIO_PIN_SET)
-	  		  {
-	  			  state = '5';
-	  			  save = state;
+	  			  firsttime = 0;
 	  		  }
 	  		  User_Button[1] = User_Button[0];
+	  		  if(HAL_GPIO_ReadPin(GPIOC, GPIO_PIN_13) == GPIO_PIN_RESET && firsttime == 0)
+	  		  {
+	  			  HAL_UART_Transmit(&huart2, (uint8_t*)button, strlen(button),2000);
+	  			  firsttime += 1;
+	  		  }
+	  		  else if(HAL_GPIO_ReadPin(GPIOC, GPIO_PIN_13) == GPIO_PIN_SET && firsttime == 0)
+	  		  {
+	  			  HAL_UART_Transmit(&huart2, (uint8_t*)unbutton, strlen(unbutton),2000);
+	  			  firsttime += 1;
+	  		  }
 	  		  switch(inputchar)
 	  		  {
 				case 'x':
@@ -236,26 +293,29 @@ int main(void)
 	  			default:
 	  				if(Input != 0)
 	  				{
-	  					state = save;
+	  					HAL_UART_Transmit(&huart2, (uint8_t*)error, strlen(error),2000);
+	  					firsttime = 0;
 	  				}
 	  				break;
 	  		  }
 	  	  }
 	  	  break;
-	  	  case '4'://Press
-	  	  {
-	  		  char button[] = " x. Back \r\n Button is pressed\r\n\r\n";
-	  		  HAL_UART_Transmit(&huart2, (uint8_t*)button, strlen(button),1000);
-	  		  state = '3';
-	  	  }
-	  	  break;
-	  	  case '5'://Unpress
-	  	  {
-	  		  char button[] = " x. Back \r\n Button is unpressed\r\n\r\n";
-	  		  HAL_UART_Transmit(&huart2, (uint8_t*)button, strlen(button),1000);
-	  		  state = '3';
-	  	  }
-	  	  break;
+//	  	  case '4'://Press
+//	  	  {
+//	  		  HAL_UART_Transmit(&huart2, (uint8_t*)error, strlen(error),2000);
+//	  		  char button[] = " x. Back \r\n Button is pressed\r\n\r\n";
+//	  		  HAL_UART_Transmit(&huart2, (uint8_t*)button, strlen(button),2000);
+//	  		  state = '3';
+//	  	  }
+//	  	  break;
+//	  	  case '5'://Unpress
+//	  	  {
+//	  		  HAL_UART_Transmit(&huart2, (uint8_t*)error, strlen(error),2000);
+//	  		  char button[] = " x. Back \r\n Button is unpressed\r\n\r\n";
+//	  		  HAL_UART_Transmit(&huart2, (uint8_t*)button, strlen(button),2000);
+//	  		  state = '3';
+//	  	  }
+//	  	  break;
 
 	  }
 
@@ -288,9 +348,9 @@ void SystemClock_Config(void)
   RCC_OscInitStruct.HSICalibrationValue = RCC_HSICALIBRATION_DEFAULT;
   RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
   RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSI;
-  RCC_OscInitStruct.PLL.PLLM = 16;
-  RCC_OscInitStruct.PLL.PLLN = 336;
-  RCC_OscInitStruct.PLL.PLLP = RCC_PLLP_DIV4;
+  RCC_OscInitStruct.PLL.PLLM = 8;
+  RCC_OscInitStruct.PLL.PLLN = 100;
+  RCC_OscInitStruct.PLL.PLLP = RCC_PLLP_DIV2;
   RCC_OscInitStruct.PLL.PLLQ = 4;
   if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
   {
@@ -305,10 +365,68 @@ void SystemClock_Config(void)
   RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV2;
   RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV1;
 
-  if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_2) != HAL_OK)
+  if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_3) != HAL_OK)
   {
     Error_Handler();
   }
+}
+
+/**
+  * @brief TIM5 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_TIM5_Init(void)
+{
+
+  /* USER CODE BEGIN TIM5_Init 0 */
+
+  /* USER CODE END TIM5_Init 0 */
+
+  TIM_ClockConfigTypeDef sClockSourceConfig = {0};
+  TIM_MasterConfigTypeDef sMasterConfig = {0};
+  TIM_IC_InitTypeDef sConfigIC = {0};
+
+  /* USER CODE BEGIN TIM5_Init 1 */
+
+  /* USER CODE END TIM5_Init 1 */
+  htim5.Instance = TIM5;
+  htim5.Init.Prescaler = 99;
+  htim5.Init.CounterMode = TIM_COUNTERMODE_UP;
+  htim5.Init.Period = 4294967295;
+  htim5.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
+  htim5.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
+  if (HAL_TIM_Base_Init(&htim5) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sClockSourceConfig.ClockSource = TIM_CLOCKSOURCE_INTERNAL;
+  if (HAL_TIM_ConfigClockSource(&htim5, &sClockSourceConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  if (HAL_TIM_IC_Init(&htim5) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
+  sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
+  if (HAL_TIMEx_MasterConfigSynchronization(&htim5, &sMasterConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sConfigIC.ICPolarity = TIM_INPUTCHANNELPOLARITY_RISING;
+  sConfigIC.ICSelection = TIM_ICSELECTION_DIRECTTI;
+  sConfigIC.ICPrescaler = TIM_ICPSC_DIV1;
+  sConfigIC.ICFilter = 0;
+  if (HAL_TIM_IC_ConfigChannel(&htim5, &sConfigIC, TIM_CHANNEL_1) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN TIM5_Init 2 */
+
+  /* USER CODE END TIM5_Init 2 */
+
 }
 
 /**
@@ -378,16 +496,29 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
-void UARTRecieveAndResponsePolling()
+void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 {
-	char Recieve[32]={0};
-
-	HAL_UART_Receive(&huart2, (uint8_t*)Recieve, 32, 1000);
-
-	sprintf(TxDataBuffer, "Received:[%s]\r\n", Recieve);
-	HAL_UART_Transmit(&huart2, (uint8_t*)TxDataBuffer, strlen(TxDataBuffer), 1000);
-
+	if(htim == &htim5)
+	{
+		_micros += 4294967295;
+	}
 }
+
+uint64_t micros()
+{
+	return (_micros + htim5.Instance->CNT);//counter of Timer 5
+}
+
+//void UARTRecieveAndResponsePolling()
+//{
+//	char Recieve[32]={0};
+//
+//	HAL_UART_Receive(&huart2, (uint8_t*)Recieve, 32, 2000);
+//
+//	sprintf(TxDataBuffer, "Received:[%s]\r\n", Recieve);
+//	HAL_UART_Transmit(&huart2, (uint8_t*)TxDataBuffer, strlen(TxDataBuffer), 2000);
+//
+//}
 
 int16_t UARTRecieveIT()
 {
@@ -404,7 +535,7 @@ int16_t UARTRecieveIT()
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 {
 	sprintf(TxDataBuffer, "Received:[%s]\r\n", RxDataBuffer);
-	HAL_UART_Transmit(&huart2, (uint8_t*)TxDataBuffer, strlen(TxDataBuffer), 1000);
+	HAL_UART_Transmit(&huart2, (uint8_t*)TxDataBuffer, strlen(TxDataBuffer), 2000);
 }
 /* USER CODE END 4 */
 
