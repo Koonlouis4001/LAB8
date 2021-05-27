@@ -53,7 +53,6 @@ char RxDataBuffer[32] =
 char ButtonStatus[32] =
 { 0 };
 
-char Frequencyline[32] = { 0 };
 char button[] = " x. Back \r\n Button is pressed\r\n\r\n";
 char unbutton[] = " x. Back \r\n Button is unpressed\r\n\r\n";
 char off[] = " LED is stop working\r\n\r\n";
@@ -125,7 +124,7 @@ int main(void)
   HAL_TIM_Base_Start_IT(&htim5);
   {
 	  char temp[]="NOW LOADING... \r\nLAB9 is now operating \r\n\r\n";
-	  HAL_UART_Transmit(&huart2, (uint8_t*)temp, strlen(temp),2000);
+	  HAL_UART_Transmit(&huart2, (uint8_t*)temp, strlen(temp),1000);
   }
   /* USER CODE END 2 */
 
@@ -150,6 +149,7 @@ int main(void)
 	  //UARTRecieveAndResponsePolling();
 
 	  		/*Method 2 Interrupt Mode*/
+	  char Frequencyline[] = "Frequency is";
 	  HAL_UART_Receive_IT(&huart2,  (uint8_t*)RxDataBuffer, 32);
 
 	  		/*Method 2 W/ 1 Char Received*/
@@ -158,7 +158,7 @@ int main(void)
 	  {
 
 	  	sprintf(TxDataBuffer, "ReceivedChar:[%c]\r\n\r\n", inputchar);
-	  	HAL_UART_Transmit(&huart2, (uint8_t*)TxDataBuffer, strlen(TxDataBuffer), 2000);
+	  	HAL_UART_Transmit(&huart2, (uint8_t*)TxDataBuffer, strlen(TxDataBuffer), 1000);
 	  	Input = 1;
 	  }
 	  else
@@ -175,7 +175,7 @@ int main(void)
 	  	  case '0': //0 start
 	  	  {
 	  		char temp[] = " 0. LED Control \r\n 1. Button Status\r\n\r\n";
-	  		HAL_UART_Transmit(&huart2, (uint8_t*)temp, strlen(temp),2000);
+	  		HAL_UART_Transmit(&huart2, (uint8_t*)temp, strlen(temp),1000);
 	  		state = '1'; //1 selectMode
 	  	  }
 	  	  break;
@@ -186,7 +186,7 @@ int main(void)
 	  		  	  case '0'://LED Control
 	  		  	  {
 	  		  		  char temp[] = " a. Speed up \r\n s. Speed down\r\n d. On/Off\r\n x. Back\r\n\r\n";
-	  		  		  HAL_UART_Transmit(&huart2, (uint8_t*)temp, strlen(temp),2000);
+	  		  		  HAL_UART_Transmit(&huart2, (uint8_t*)temp, strlen(temp),1000);
 	  		  		  state = '2';//LED Control state
 	  		  		  break;
 	  		  	  }
@@ -199,7 +199,7 @@ int main(void)
 	  		  	  default:
 	  		  		  if(Input != 0)
 	  		  		  {
-	  		  			  HAL_UART_Transmit(&huart2, (uint8_t*)error, strlen(error),2000);
+	  		  			  HAL_UART_Transmit(&huart2, (uint8_t*)error, strlen(error),1000);
 	  		  			  state = '0';//start
 	  		  		  }
 	  		  		  break;
@@ -215,7 +215,8 @@ int main(void)
 	  		  	  {
 	  		  		  frequency += 1;
 	  		  		  sprintf(Frequencyline, "Frequency is [%d] Hz\r\n\r\n", frequency);
-	  		  		  HAL_UART_Transmit(&huart2, (uint8_t*)Frequencyline, strlen(Frequencyline),2000);
+	  		  		  HAL_UART_Transmit(&huart2, (uint8_t*)Frequencyline, strlen(Frequencyline),1000);
+	  		  		  char Frequencyline[32] = { 0 };
 	  		  		  break;
 	  		  	  }
 	  		  	  break;
@@ -227,7 +228,7 @@ int main(void)
 		  		  		  frequency += -1;
 	  		  		  }
 	  		  		  sprintf(Frequencyline, "Frequency is [%d] Hz\r\n\r\n", frequency);
-	  		  		  HAL_UART_Transmit(&huart2, (uint8_t*)Frequencyline, strlen(Frequencyline),2000);
+	  		  		  HAL_UART_Transmit(&huart2, (uint8_t*)Frequencyline, strlen(Frequencyline),1000);
 	  		  		  break;
 	  		  	  }
 	  		  	  break;
@@ -237,12 +238,12 @@ int main(void)
 	  		  		  if(Working)
 	  		  		  {
 	  		  			  Working = 0;
-	  		  			  HAL_UART_Transmit(&huart2, (uint8_t*)off, strlen(off),2000);
+	  		  			  HAL_UART_Transmit(&huart2, (uint8_t*)off, strlen(off),1000);
 	  		  		  }
 	  		  		  else
 	  		  		  {
 	  		  			  Working = 1;
-	  		  			  HAL_UART_Transmit(&huart2, (uint8_t*)on, strlen(on),2000);
+	  		  			  HAL_UART_Transmit(&huart2, (uint8_t*)on, strlen(on),1000);
 	  		  		  }
 	  		  		  break;
 	   		  	  }
@@ -257,8 +258,8 @@ int main(void)
 	  		  		  if(Input != 0)
 	  		  		  {
 	  		  			  char temp[] = " a. Speed up \r\n s. Speed down\r\n d. On/Off\r\n x. Back\r\n\r\n";
-	  		  			  HAL_UART_Transmit(&huart2, (uint8_t*)error, strlen(error),2000);
-	  		  			  HAL_UART_Transmit(&huart2, (uint8_t*)temp, strlen(temp),2000);
+	  		  			  HAL_UART_Transmit(&huart2, (uint8_t*)error, strlen(error),1000);
+	  		  			  HAL_UART_Transmit(&huart2, (uint8_t*)temp, strlen(temp),1000);
 	  		  		  }
 	  		  		  break;
 	  		  }
@@ -274,12 +275,12 @@ int main(void)
 	  		  User_Button[1] = User_Button[0];
 	  		  if(HAL_GPIO_ReadPin(GPIOC, GPIO_PIN_13) == GPIO_PIN_RESET && firsttime == 0)
 	  		  {
-	  			  HAL_UART_Transmit(&huart2, (uint8_t*)button, strlen(button),2000);
+	  			  HAL_UART_Transmit(&huart2, (uint8_t*)button, strlen(button),1000);
 	  			  firsttime += 1;
 	  		  }
 	  		  else if(HAL_GPIO_ReadPin(GPIOC, GPIO_PIN_13) == GPIO_PIN_SET && firsttime == 0)
 	  		  {
-	  			  HAL_UART_Transmit(&huart2, (uint8_t*)unbutton, strlen(unbutton),2000);
+	  			  HAL_UART_Transmit(&huart2, (uint8_t*)unbutton, strlen(unbutton),1000);
 	  			  firsttime += 1;
 	  		  }
 	  		  switch(inputchar)
@@ -293,7 +294,7 @@ int main(void)
 	  			default:
 	  				if(Input != 0)
 	  				{
-	  					HAL_UART_Transmit(&huart2, (uint8_t*)error, strlen(error),2000);
+	  					HAL_UART_Transmit(&huart2, (uint8_t*)error, strlen(error),1000);
 	  					firsttime = 0;
 	  				}
 	  				break;
@@ -302,17 +303,17 @@ int main(void)
 	  	  break;
 //	  	  case '4'://Press
 //	  	  {
-//	  		  HAL_UART_Transmit(&huart2, (uint8_t*)error, strlen(error),2000);
+//	  		  HAL_UART_Transmit(&huart2, (uint8_t*)error, strlen(error),1000);
 //	  		  char button[] = " x. Back \r\n Button is pressed\r\n\r\n";
-//	  		  HAL_UART_Transmit(&huart2, (uint8_t*)button, strlen(button),2000);
+//	  		  HAL_UART_Transmit(&huart2, (uint8_t*)button, strlen(button),1000);
 //	  		  state = '3';
 //	  	  }
 //	  	  break;
 //	  	  case '5'://Unpress
 //	  	  {
-//	  		  HAL_UART_Transmit(&huart2, (uint8_t*)error, strlen(error),2000);
+//	  		  HAL_UART_Transmit(&huart2, (uint8_t*)error, strlen(error),1000);
 //	  		  char button[] = " x. Back \r\n Button is unpressed\r\n\r\n";
-//	  		  HAL_UART_Transmit(&huart2, (uint8_t*)button, strlen(button),2000);
+//	  		  HAL_UART_Transmit(&huart2, (uint8_t*)button, strlen(button),1000);
 //	  		  state = '3';
 //	  	  }
 //	  	  break;
@@ -513,10 +514,10 @@ uint64_t micros()
 //{
 //	char Recieve[32]={0};
 //
-//	HAL_UART_Receive(&huart2, (uint8_t*)Recieve, 32, 2000);
+//	HAL_UART_Receive(&huart2, (uint8_t*)Recieve, 32, 1000);
 //
 //	sprintf(TxDataBuffer, "Received:[%s]\r\n", Recieve);
-//	HAL_UART_Transmit(&huart2, (uint8_t*)TxDataBuffer, strlen(TxDataBuffer), 2000);
+//	HAL_UART_Transmit(&huart2, (uint8_t*)TxDataBuffer, strlen(TxDataBuffer), 1000);
 //
 //}
 
@@ -535,7 +536,7 @@ int16_t UARTRecieveIT()
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 {
 	sprintf(TxDataBuffer, "Received:[%s]\r\n", RxDataBuffer);
-	HAL_UART_Transmit(&huart2, (uint8_t*)TxDataBuffer, strlen(TxDataBuffer), 2000);
+	HAL_UART_Transmit(&huart2, (uint8_t*)TxDataBuffer, strlen(TxDataBuffer), 1000);
 }
 /* USER CODE END 4 */
 
